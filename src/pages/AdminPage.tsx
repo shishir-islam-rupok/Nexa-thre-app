@@ -10,6 +10,12 @@ import { Shield, Users, CreditCard, Flag, Search, CheckCircle2, XCircle, Activit
 
 type Tab = 'overview' | 'users' | 'payments' | 'reports' | 'posts';
 
+type Stat = {
+  icon: typeof Users;
+  label: string;
+  value: string | number;
+};
+
 export default function AdminPage() {
   const { profile } = useAuth();
   const { showToast } = useToast();
@@ -77,26 +83,33 @@ export default function AdminPage() {
   async function reportStatus(id: string, status: string) {
     const { error } = await supabase.from('reports').update({ status }).eq('id', id);
     if (!error) await supabase.from('admin_actions').insert({ admin_id: profile.id, action: `report_${status}`, entity_type: 'report', entity_id: id });
-    load();
+    await load();
     showToast(error ? error.message : `Report ${status}`, error ? 'error' : 'success');
   }
 
   async function deletePost(id: string) {
     const { error } = await supabase.from('posts').delete().eq('id', id);
     if (!error) await supabase.from('admin_actions').insert({ admin_id: profile.id, action: 'post_deleted', entity_type: 'post', entity_id: id });
-    load();
+    await load();
     showToast(error ? error.message : 'Post removed', error ? 'error' : 'info');
   }
 
   async function setRole(user: Profile, role: string) {
     if (profile.role !== 'admin' || user.id === profile.id) return;
     const { error } = await supabase.from('profiles').update({ role }).eq('id', user.id);
-    if (error) showToast(error.message, 'error'); else { showToast('Role updated'); load(); }
+    if (error) showToast(error.message, 'error'); else { showToast('Role updated'); await load(); }
   }
 
   const tabs: [Tab, string, number?][] = [
     ['overview', 'Overview'], ['users', 'Users', users.length], ['payments', 'Payments', pending.length],
     ['reports', 'Reports', pendingReports.length], ['posts', 'Moderation', posts.length],
+  ];
+
+  const stats: Stat[] = [
+    { icon: Users, label: 'Users', value: users.length },
+    { icon: CreditCard, label: 'Pending', value: pending.length },
+    { icon: Flag, label: 'Reports', value: pendingReports.length },
+    { icon: DollarSign, label: 'Volume', value: formatCurrency(totalVolume) },
   ];
 
   return <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
@@ -107,7 +120,7 @@ export default function AdminPage() {
     <div className="flex gap-1 overflow-x-auto p-1 rounded-xl bg-ink-100 dark:bg-ink-800">{tabs.map(([key, label, count]) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${tab === key ? 'bg-white dark:bg-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-800'}`}>{label}{count !== undefined && <span className="ml-1.5 text-xs opacity-60">{compactNumber(count)}</span>}</button>)}</div>
 
     {loading ? <div className="h-64 rounded-2xl bg-ink-100 dark:bg-ink-800 animate-pulse" /> : tab === 'overview' ? <div className="space-y-5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[[Users, 'Users', users.length], [CreditCard, 'Pending', pending.length], [Flag, 'Reports', pendingReports.length], [DollarSign, 'Volume', formatCurrency(totalVolume)]].map(([Icon, label, value]) => <div key={String(label)} className="rounded-2xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 p-4 hover:-translate-y-0.5 transition-transform"><Icon className="w-5 h-5 text-accent-600 mb-3" /><p className="text-2xl font-bold">{String(value)}</p><p className="text-xs text-ink-400 mt-1">{String(label)}</p></div>)}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{stats.map(({ icon: Icon, label, value }) => <div key={label} className="rounded-2xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 p-4 hover:-translate-y-0.5 transition-transform"><Icon className="w-5 h-5 text-accent-600 mb-3" /><p className="text-2xl font-bold">{String(value)}</p><p className="text-xs text-ink-400 mt-1">{label}</p></div>)}</div>
       <section className="rounded-2xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 p-5"><h2 className="font-semibold mb-3">Latest payment activity</h2>{tx.slice(0, 8).map((x) => <div key={x.id} className="flex items-center gap-3 py-2.5 border-b last:border-0 border-ink-100 dark:border-ink-800"><Avatar name={x.sender?.full_name || 'User'} src={x.sender?.avatar_url || undefined} size={34} /><div className="flex-1"><p className="text-sm font-medium">{x.sender?.full_name} → {x.receiver?.full_name}</p><p className="text-xs text-ink-400">{timeAgo(x.created_at)}</p></div><b className="text-sm">{formatCurrency(x.amount_cents)}</b><Status status={x.status} /></div>)}</section>
     </div> : tab === 'users' ? <section><div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search users..." className="w-full h-11 pl-10 pr-4 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 outline-none focus:ring-2 focus:ring-accent-500/30" /></div><div className="grid md:grid-cols-2 gap-2">{filteredUsers.map((u) => <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800"><Avatar name={u.full_name} src={u.avatar_url || undefined} size={42} /><div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{u.full_name}</p><p className="text-xs text-ink-400 truncate">@{u.username} · {timeAgo(u.created_at)}</p></div>{profile.role === 'admin' ? <select value={u.role} onChange={(e) => setRole(u, e.target.value)} className="text-xs rounded-lg bg-ink-100 dark:bg-ink-800 px-2 py-1.5"><option value="user">User</option><option value="moderator">Moderator</option><option value="admin">Admin</option></select> : <span className="text-xs text-ink-400">{u.role}</span>}</div>)}</div></section> : tab === 'payments' ? <section className="space-y-3">{tx.length === 0 ? <EmptyState icon={<CreditCard />} title="No payments" /> : tx.map((x) => <div key={x.id} className="p-4 rounded-2xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 hover:shadow-md transition-shadow"><div className="flex items-start gap-3"><Avatar name={x.sender?.full_name || 'User'} src={x.sender?.avatar_url || undefined} size={40} /><div className="flex-1"><p className="font-semibold text-sm">{x.sender?.full_name} → {x.receiver?.full_name}</p><p className="text-xs text-ink-400">{formatDateTime(x.created_at)} · {x.payment_method || 'wallet'} · Trx: {x.tx_trx_id || '-'}</p>{x.admin_note && <p className="text-xs mt-2 text-ink-500">Note: {x.admin_note}</p>}</div><div className="text-right"><b>{formatCurrency(x.amount_cents)}</b><div className="mt-1"><Status status={x.status} /></div></div></div>{x.status === 'pending' && <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-ink-100 dark:border-ink-800"><button disabled={busy === x.id} onClick={() => reviewPayment(x, 'rejected')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"><XCircle className="inline w-4 h-4 mr-1" />Reject</button><button disabled={busy === x.id} onClick={() => reviewPayment(x, 'approved')} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><CheckCircle2 className="inline w-4 h-4 mr-1" />Approve</button></div>}</div>)}</section> : tab === 'reports' ? <section className="space-y-2">{reports.length === 0 ? <EmptyState icon={<Flag />} title="No reports" /> : reports.map((r) => <div key={r.id} className="p-4 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800"><div className="flex items-start gap-3"><Flag className="w-5 h-5 text-rose-500 mt-0.5" /><div className="flex-1"><p className="text-sm font-semibold">{r.reason}</p><p className="text-xs text-ink-500 mt-1">{r.description || 'No description'}</p><p className="text-xs text-ink-400 mt-2">{formatDateTime(r.created_at)} · {r.entity_type}</p></div><div className="flex gap-1">{r.status === 'pending' && <><button onClick={() => reportStatus(r.id, 'reviewed')} className="px-2.5 py-1.5 rounded-lg text-xs bg-ink-100 dark:bg-ink-800">Review</button><button onClick={() => reportStatus(r.id, 'resolved')} className="px-2.5 py-1.5 rounded-lg text-xs bg-emerald-50 text-emerald-600">Resolve</button></>}</div></div></div>)}</section> : <section className="space-y-2">{posts.map((p) => <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800"><Avatar name={p.profile?.full_name || 'User'} src={p.profile?.avatar_url || undefined} size={36} /><div className="flex-1 min-w-0"><p className="text-sm font-semibold">{p.profile?.full_name}</p><p className="text-xs text-ink-500 truncate">{p.content}</p></div><button onClick={() => deletePost(p.id)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50">Remove</button></div>)}</section>}
   </div>;
