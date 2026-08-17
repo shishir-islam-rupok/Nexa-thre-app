@@ -12,95 +12,94 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    background: #f7f7fb;
   }
 
-  html,
-  body,
-  #root {
-    min-height: 100%;
-  }
+  html.dark { background: #09090f; }
+
+  html, body, #root { min-height: 100%; }
 
   body {
     @apply bg-ink-50 text-ink-900 dark:bg-ink-950 dark:text-ink-100;
     overflow-x: hidden;
+    background-image: radial-gradient(circle at 15% 0%, rgba(109, 93, 252, 0.055), transparent 30%), radial-gradient(circle at 85% 10%, rgba(45, 212, 191, 0.045), transparent 28%);
   }
 
-  button,
-  input,
-  textarea,
-  select {
-    font: inherit;
+  .dark body {
+    background-image: radial-gradient(circle at 12% 0%, rgba(109, 93, 252, 0.12), transparent 30%), radial-gradient(circle at 88% 12%, rgba(45, 212, 191, 0.06), transparent 28%);
   }
 
-  button:disabled {
-    cursor: not-allowed;
-  }
-
-  img,
-  video {
-    max-width: 100%;
-  }
-
-  ::selection {
-    @apply bg-accent-500/20;
-  }
+  button, input, textarea, select { font: inherit; }
+  button:disabled { cursor: not-allowed; }
+  img, video { max-width: 100%; }
+  ::selection { @apply bg-accent-500/20; }
+  :focus-visible { outline: 2px solid theme('colors.accent.500'); outline-offset: 2px; }
 }
 
 @layer components {
   .nexa-card {
-    @apply rounded-2xl border border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900;
+    @apply rounded-2xl border bg-white/90 dark:bg-ink-900/90;
+    border-color: rgba(226, 228, 235, 0.9);
+    box-shadow: 0 8px 30px rgba(31, 35, 45, 0.045);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
   }
 
-  .nexa-touch {
-    @apply transition-transform duration-200 active:scale-[0.98];
+  .dark .nexa-card { border-color: rgba(255,255,255,.07); box-shadow: 0 16px 45px rgba(0,0,0,.24); }
+  .nexa-card:hover { border-color: rgba(109,93,252,.18); box-shadow: 0 14px 38px rgba(31,35,45,.075); }
+  .dark .nexa-card:hover { border-color: rgba(139,124,255,.22); box-shadow: 0 18px 50px rgba(0,0,0,.3); }
+
+  .nexa-touch { @apply transition-transform duration-200 active:scale-[0.98]; }
+
+  .nexa-glass {
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(226,228,235,.82);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
   }
+  .dark .nexa-glass { background: rgba(18,18,27,.72); border-color: rgba(255,255,255,.07); }
+
+  .nexa-gradient-text {
+    background: linear-gradient(110deg, #6d5dfc 0%, #8b7cff 48%, #2dd4bf 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .nexa-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #6d5dfc, #5a4be7);
+    box-shadow: 0 8px 20px rgba(109,93,252,.22);
+  }
+  .nexa-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(109,93,252,.3); }
+  .nexa-primary:active { transform: translateY(0) scale(.98); }
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(173 181 189 / 0.3) transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgb(173 181 189 / 0.3);
-    border-radius: 3px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(173 181 189 / 0.5);
-  }
-
-  .scrollbar-none {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  .safe-bottom {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  }
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / .25) transparent; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: rgb(148 163 184 / .25); border-radius: 999px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: rgb(148 163 184 / .42); }
+  .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .text-balance { text-wrap: balance; }
+  .safe-bottom { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+  .premium-shadow { box-shadow: 0 18px 55px rgba(31,35,45,.08); }
+  .dark .premium-shadow { box-shadow: 0 20px 65px rgba(0,0,0,.3); }
 }
 
 @media (max-width: 640px) {
-  .modal-mobile-safe {
-    max-height: calc(100dvh - 1rem);
-    overflow-y: auto;
+  .modal-mobile-safe { max-height: calc(100dvh - 1rem); overflow-y: auto; }
+  .nexa-card { border-radius: 1.125rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
   }
 }
